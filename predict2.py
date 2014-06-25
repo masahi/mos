@@ -9,6 +9,7 @@ from sklearn import preprocessing
 import time
 from joblib import Parallel, delayed,load,dump
 import helper
+from unary_feature import get_unary
 
 def get_beta(vol):
     d,h,w = vol.shape
@@ -20,15 +21,22 @@ def get_beta(vol):
 def fusion_move(current, unary, pair_costs, pair_index, atlas,w,h,d):
     # fusion_mover= opengm.inference.adder.minimizer.FusionMover(gm)
     fused = current
+    n_labels = unary.shape[1]
     
+    # for i in range(n_labels):
+    #     print i
+    #     label = np.ones(fused.shape[0]) * i
+    #     fused,energy,n_sup = helper.fusion_move(np.array(fused).astype(np.int32), label.astype(np.int32), np.array(unary).astype(np.float32), pair_costs, pair_index)
+    #     print dir,energy ,n_sup, pair_index.shape[0], time.time()-t               
+        
     for i,dir in enumerate(atlas):
         t = time.time()
 #        label = nib.load(dir + "/re_label.nii")
         label = nib.load(dir + "/registered_label.nii")        
         fused,energy,n_sup = helper.fusion_move(np.array(fused).astype(np.int32), label.get_data().flatten(order="F").astype(np.int32), np.array(unary).astype(np.float32), pair_costs, pair_index)
         print dir,energy ,n_sup, pair_index.shape[0], time.time()-t               
-        # seg_image = Nifti1Image(np.array(fused).reshape(w,h,d,order='F'), label.get_affine(), header = label.get_header())
-        # seg_image.to_filename("seg.nii" % str(i))
+        seg_image = Nifti1Image(np.array(fused).reshape(w,h,d,order='F'), label.get_affine(), header = label.get_header())
+        seg_image.to_filename("%s_seg.nii" % str(i))
 
     return fused
 
@@ -55,24 +63,25 @@ d,h,w = vol_data.shape
 n_var = w * h * d
 epsilon = 1e-7
 unary_coeff = 1
-pair_coeff = 5
+pair_coeff = 2
 
 t = time.time()
 scaler = load("scaler.joblib.dump")
 
-features = helper.get_feature(vol_data.astype(np.float32))
-features = scaler.transform(features)    
-print time.time() - t
-print "get features"
+# features = helper.get_feature(vol_data.astype(np.float32))
+# features = scaler.transform(features)    
+# print time.time() - t
+# print "get features"
 
-forest = load("forest.joblib.dump")
+# forest = load("forest.joblib.dump")
 
-print "loaded forest"
-
-t = time.time()
-unary = unary_coeff * -np.log(forest.predict_proba(features) + epsilon)
-unary = unary.astype(np.float32)
-print time.time() - t
+# print "loaded forest"
+# from unary_feature import 
+# t = time.time()
+# unary = unary_coeff * -np.log(forest.predict_proba(features) + epsilon)
+# unary = unary.astype(np.float32)
+# print time.time() - t
+unary = get_unary(vol_data, 1, n_labels)
 print "got unary"
 #dump(unary,"unary.joblib.dump")
 #unary = load("unary.joblib.dump")
@@ -85,7 +94,6 @@ beta = get_beta(vol_data)
 n_edge = (w - 1) * h * d + (h-1)*w*d + (d-1)*w*h
 pair_index = np.empty((n_edge, 2),dtype=np.uint32)
 pair_costs = np.empty((n_edge, n_labels, n_labels), np.float32)
-t = time.time()
 helper.get_edge_cost(vol_data, w,h,d, beta, pair_coeff, pair_index, pair_costs, 32)
 # pair_costs = load("pair_costs.joblib.dump")
 # pair_index = load("pair_index.joblib.dump")
@@ -94,13 +102,13 @@ helper.get_edge_cost(vol_data, w,h,d, beta, pair_coeff, pair_index, pair_costs, 
 print time.time() - t
 
 atlas = [data_dir + "/" + dir for dir in  os.listdir(data_dir) if dir.startswith("t00") and not "190" in dir and os.path.exists("%s/%s/registered_label.nii" % (data_dir, dir))]
-xoprint len(atlas)
+print len(atlas)
          
 t = time.time()
 fused = fusion_move(current, unary, pair_costs, pair_index, atlas,w,h,d)
 seg_image = Nifti1Image(np.array(fused).reshape(w,h,d,order='F'), label.get_affine(), header = label.get_header())
 seg_image.to_filename("seg2.nii")
-print time.time() - t
+# print time.time() - t
 # t = time.time()
 # gm = opengm.gm(np.ones(n_var, dtype=opengm.label_type)*n_labels)
 # fids = gm.addFunctions(pair_costs)

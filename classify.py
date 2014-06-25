@@ -18,7 +18,6 @@ c = 0
 per_class = np.array([0,0,0,0,0], dtype=np.float)
 class_count = np.array([0,0,0,0,0], dtype=np.float)
 
-
 patch_size = 9
 rad = patch_size / 2
 
