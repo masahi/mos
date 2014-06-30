@@ -23,8 +23,8 @@ def fusion_move(current, unary, pair_costs, pair_index, atlas,w,h,d):
     
     for i,dir in enumerate(atlas):
         t = time.time()
-        label = nib.load(dir + "/re_label.nii")
-#        label = nib.load(dir + "/registered_label.nii")        
+#        label = nib.load(dir + "/re_label.nii")
+        label = nib.load(dir + "/registered_label.nii")        
         fused,energy,n_sup = helper.fusion_move(np.array(fused).astype(np.int32), label.get_data().flatten(order="F").astype(np.int32), np.array(unary).astype(np.float32), pair_costs, pair_index)
         print dir,energy ,n_sup, pair_index.shape[0], time.time()-t               
         # seg_image = Nifti1Image(np.array(fused).reshape(w,h,d,order='F'), label.get_affine(), header = label.get_header())
@@ -33,7 +33,6 @@ def fusion_move(current, unary, pair_costs, pair_index, atlas,w,h,d):
     return fused
 
 data_dir = "/home/masa/project/nii"
-
 n_labels = 8
 label_map = defaultdict(int)
 label_map[9]  = 1 #Gallbladder
@@ -95,7 +94,7 @@ helper.get_edge_cost(vol_data, w,h,d, beta, pair_coeff, pair_index, pair_costs, 
 print time.time() - t
 
 atlas = [data_dir + "/" + dir for dir in  os.listdir(data_dir) if dir.startswith("t00") and not "190" in dir and os.path.exists("%s/%s/registered_label.nii" % (data_dir, dir))]
-print len(atlas)
+xoprint len(atlas)
          
 t = time.time()
 fused = fusion_move(current, unary, pair_costs, pair_index, atlas,w,h,d)
