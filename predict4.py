@@ -23,36 +23,29 @@ def get_beta(vol):
 def fusion_move(pa, intensity_term, pair_costs, pair_index, atlas,w,h,d):
     # fusion_mover= opengm.inference.adder.minimizer.FusionMover(gm)
     n_labels = pa.shape[1]
-    atlas_weight = 1.0
-    prox_weight = 0.5
+    atlas_weight = 1
+    prox_weight = 0.3
 
-    atlas_term = -atlas_weight * np.log(pa+epsilon)
-    #prox = get_prox_term(pa, np.zeros((d,h,w)), [1,1,1], n_labels, True)
-    prox = load("prox.dump")
-    prox_term = -prox_weight * np.log(prox+epsilon)
+    atlas_term = -atlas_weight * -np.log(pa+epsilon)
+    prox = get_prox_term(pa, np.zeros((d,h,w)), [1,1,1], n_labels, True)
+    prox_term = -prox_weight * -np.log(prox+epsilon)
     a_i = atlas_term  + intensity_term
     unary =  a_i + prox_term
     fused = np.argmin(unary, axis=1)
+    for i in range(n_labels):
+        print i        
+        label = np.ones(fused.shape[0]) * i
 
-    for ii in range(1):
-        for a in atlas:
-            print a    
-            proposal = np.ones(fused.shape[0]) * i
-#            proposal = np.ascontiguousarray(nib.load(a + "/registered_label.nii").get_data().swapaxes(0,2)).flatten()        
-            t = time.time()
-            fused,energy,n_sup = helper.fusion_move(np.array(fused).astype(np.int32), proposal.astype(np.int32), np.array(unary).astype(np.float32), pair_costs, pair_index)
-            print dir,energy ,n_sup, pair_index.shape[0], time.time()-t
-            
-        seg_image = Nifti1Image(np.array(fused).reshape(w,h,d,order='F'), label.get_affine(), header = label.get_header())
-        seg_image.to_filename("%s_label.nii" % str(ii))
-        # prox = get_prox_term(pa, np.array(fused).reshape(d,h,w), [1,1,1], n_labels)
-        # prox_term = -prox_weight * np.log(prox + epsilon)
-        # unary = a_i + prox_term
+        fused,energy,n_sup = helper.fusion_move(np.array(fused).astype(np.int32), label.astype(np.int32), np.array(unary).astype(np.float32), pair_costs, pair_index)
+        print dir,energy ,n_sup, pair_index.shape[0], time.time()-t
+        prox = get_prox_term(pa, np.array(fused).reshape(d,h,w), [1,1,1], n_labels)
+        prox_term = -prox_weight * np.log(prox + epsilon)
+        unary = a_i + prox_term
         
 #     for i,dir in enumerate(atlas):
 #         t = time.time()
 # #        label = nib.load(dir + "/re_label.nii")
-#         
+#         label = nib.load(dir + "/registered_label.nii")        
 #         fused,energy,n_sup = helper.fusion_move(np.array(fused).astype(np.int32), label.get_data().flatten(order="F").astype(np.int32), np.array(unary).astype(np.float32), pair_costs, pair_index)
 #         print dir,energy ,n_sup, pair_index.shape[0], time.time()-t               
 #         seg_image = Nifti1Image(np.array(fused).reshape(w,h,d,order='F'), label.get_affine(), header = label.get_header())
@@ -83,7 +76,7 @@ d,h,w = vol_data.shape
 n_var = w * h * d
 epsilon = 1e-7
 unary_coeff = 1
-pair_coeff = 1.3
+pair_coeff = 2
 
 t = time.time()
 scaler = load("scaler.joblib.dump")
@@ -111,24 +104,23 @@ patch_size = 5
 rad = patch_size / 2
 padded = np.pad(vol_data, rad, mode="constant", constant_values=(-2048))
 
-features = np.empty((n_var, patch_size**3), dtype=np.float32)
-
 n_threads = 32
-# t = time.time()
-# #helper.get_feature2(padded.astype(np.float32), features, rad, n_threads)
-# print time.time() - t
+t = time.time()
+features = helper.get_feature(vol_data.astype(np.float32))
+print time.time() - t
 
-forest = load("forest.joblib.dump")
-#prob = forest.predict_proba(features)
-prob = load("prob.dump")
-u = np.argmax(prob, axis=1)
-# current = np.argmax(pa,axis=1).reshape(d,h,w).astype(np.int32)
-# t = time.time()
-inten_w = 0.3
-intensity_term = -inten_w * np.log(prob + epsilon) 
-fused = fusion_move(pa,intensity_term, pair_costs, pair_index, atlas,w,h,d)
-seg_image = Nifti1Image(np.array(fused).reshape(w,h,d,order='F'), label.get_affine(), header = label.get_header())
-seg_image.to_filename("label.nii")
+forest = load("forest3.joblib.dump")
+prob = forest.predict_proba(features)
+dump(prob, "prob2.dump")
+#prob = load("prob.dump")
+# u = np.argmax(prob, axis=1)
+# # current = np.argmax(pa,axis=1).reshape(d,h,w).astype(np.int32)
+# # t = time.time()
+# inten_w = 0.5
+# intensity_term = -inten_w * np.log(prob + epsilon) 
+# fused = fusion_move(pa,intensity_term, pair_costs, pair_index, atlas,w,h,d)
+# seg_image = Nifti1Image(u.reshape(w,h,d,order='F'), label.get_affine(), header = label.get_header())
+# seg_image.to_filename("unary_label.nii")
 # print time.time() - t
 
 # t = time.time()

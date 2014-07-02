@@ -6,7 +6,7 @@ import pylab as pl
 import matplotlib.pyplot as plt
 
 data_dir = "/home/masa/project/nii"
-p = load("unary_label.nii").get_data().flatten()
+p = load("0_label.nii").get_data().flatten()
 t = load(data_dir + "/t0000190_6/re_label.nii").get_data().flatten()
 np.mean(p.flatten() == t.flatten())
 names = ["BackGround",
@@ -18,12 +18,12 @@ names = ["BackGround",
  "IVC",
 "Pancreas"]
 
-cm = confusion_matrix(p.flatten(), t.flatten())
+cm = confusion_matrix(t.flatten(),p.flatten())
 prob = cm/ np.sum(cm, axis=1)[:,np.newaxis].astype(np.float)
 print np.diag(prob)
 fig = plt.figure()
 ax = fig.add_subplot(111)
-cax = ax.matshow(cm)
+cax = ax.matshow(prob)
 fig.colorbar(cax)
 ax.set_yticklabels([''] + names)
 #ax.set_yticklabels([''] + labels)

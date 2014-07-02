@@ -21,7 +21,7 @@ label_map[15] = 5
 label_map[16] = 6
 label_map[18] = 7
 
-sample_freq = [0.00005,0.1, 0.001, 0.015, 0.015, 0.015,0.015,0.015]
+sample_freq = [0.001,0.1, 0.001, 0.015, 0.015, 0.015,0.015,0.015]
 
 def filter_bank(img):
     bank = []
@@ -65,6 +65,38 @@ def job(dir):
 
     return patches, labels, sample_count
 
+def job2(dir):    
+    print dir
+
+    features = []
+    labels = []
+    sample_count = np.zeros(n_labels) 
+    
+    rad = 2
+    vol = load(dir + "/vol.nii")
+    label = load(dir + "/label.nii")
+
+    vol_data = vol.get_data()
+    label_data = label.get_data()
+
+    vol_data = vol_data.swapaxes(0,2)
+    label_data = label_data.swapaxes(0,2)    
+    d,h,w = vol_data.shape
+    for z in range(d):
+        for y in range(h):
+            for x in range(w):
+                l = label_map[label_data[z,y,x]]
+                if random() > sample_freq[l]: continue                                
+#                l = label_data[x,y,z]
+                features.append([vol_data[z,y,x], z, y, x])
+                labels.append(l)
+
+#                features.append([value, float(x)/w, float(y)/h, float(z)/d])
+
+                sample_count[l] += 1
+
+    return features, labels, sample_count
+
     # if not dir.startswith("t00"): return
     # print dir
     # label = load(dir + "/label.nii")
@@ -90,7 +122,7 @@ import cPickle
 with open("atlas_list") as f:
     atlas = cPickle.load(f)
 
-r = Parallel(n_jobs=len(atlas))(delayed(job)(a) for a in atlas)
+r = Parallel(n_jobs=len(atlas))(delayed(job2)(a) for a in atlas)
 features, labels, sample_count = zip(*r)
 features = np.vstack(features)
 labels = np.concatenate(labels)
@@ -111,5 +143,5 @@ weight = 1.0/sample_count[labels]
 forest.fit(features, labels, sample_weight=weight)
 print time.time() - t
 # print "done."
-dump(forest, "forest.joblib.dump")
+dump(forest, "forest3.joblib.dump")
 #dump(scaler, "scaler.joblib.dump")
