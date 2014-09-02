@@ -13,10 +13,6 @@ files = ["QPBO.cpp","QPBO_maxflow.cpp",
 
 files = [os.path.join(qpbo_directory, f) for f in files]
 files.insert(0, "_helper.pyx")
-# fastpd_dir = "fastpd/src/"
-# for f in os.listdir(fastpd_dir):
-#     if f.endswith("cpp"):
-#         files.append(fastpd_dir + f)
 
 setup(cmdclass={'build_ext': build_ext},
       ext_modules=[
